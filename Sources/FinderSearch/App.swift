@@ -241,13 +241,30 @@ struct BrowserView: View {
         }
         .overlay(alignment: .top) {
             if let confirmation = model.copyPathConfirmation {
-                Label("Path copied", systemImage: "checkmark.circle.fill")
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(Color(red: 0.12, green: 0.32, blue: 0.12))
-                    .padding(.horizontal, 16).padding(.vertical, 10)
-                    .background(Color(red: 0.76, green: 0.98, blue: 0.74), in: Capsule())
-                    .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
-                    .padding(.top, 12).allowsHitTesting(false)
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle").font(.system(size: 16))
+                    Text("경로를 복사했습니다").font(.system(size: 14))
+                    Button { model.copyPathConfirmation = nil } label: {
+                        Image(systemName: "xmark").font(.system(size: 11))
+                            .padding(4).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain).accessibilityLabel("알림 닫기")
+                }
+                    .foregroundStyle(Color(red: 0, green: 174 / 255.0, blue: 81 / 255.0))
+                    .padding(.horizontal, 18).padding(.vertical, 12)
+                    .background(
+                        Color(red: 240 / 255.0, green: 251 / 255.0, blue: 245 / 255.0),
+                        in: RoundedRectangle(cornerRadius: 12))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(
+                                Color(red: 212 / 255.0, green: 237 / 255.0, blue: 219 / 255.0),
+                                lineWidth: 1)
+                            .allowsHitTesting(false)
+                    }
+                    .fixedSize()
+                    .shadow(color: .black.opacity(0.08), radius: 8, y: 4)
+                    .padding(.top, 12)
                     .task(id: confirmation) {
                         do { try await Task.sleep(for: .seconds(1.6)) } catch { return }
                         model.copyPathConfirmation = nil
