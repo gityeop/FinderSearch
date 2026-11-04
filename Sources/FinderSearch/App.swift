@@ -243,12 +243,12 @@ struct BrowserView: View {
             if let confirmation = model.copyPathConfirmation {
                 HStack(spacing: 10) {
                     Image(systemName: "checkmark.circle").font(.system(size: 16))
-                    Text("경로를 복사했습니다").font(.system(size: 14))
+                    Text("Path copied").font(.system(size: 14))
                     Button { model.copyPathConfirmation = nil } label: {
                         Image(systemName: "xmark").font(.system(size: 11))
                             .padding(4).contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain).accessibilityLabel("알림 닫기")
+                    .buttonStyle(.plain).accessibilityLabel("Dismiss notification")
                 }
                     .foregroundStyle(Color(red: 0, green: 174 / 255.0, blue: 81 / 255.0))
                     .padding(.horizontal, 18).padding(.vertical, 12)

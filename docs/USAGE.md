@@ -132,7 +132,7 @@ not intentionally download cloud file contents.
   while editing text it remains a text-editing command. Command-Z and
   Shift-Command-Z undo/redo file actions and tags. History is in memory per tab.
 - **Other actions:** Get Info, Duplicate, Copy Path (Shift-Command-C), tags, sharing, and revealing in Finder.
-  A brief pale-green “경로를 복사했습니다” notification appears at the top center after copying,
+  A brief pale-green “Path copied” notification appears at the top center after copying,
   with an outlined checkmark, green border, and a close button.
   Change Open Selected, Rename, and Copy Path shortcuts in **FinderSearch → Settings**
   (Command-comma), or use **Restore Defaults** to restore Enter, F2, and Shift-Command-C.
