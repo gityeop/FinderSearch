@@ -17,7 +17,8 @@ enum FullDiskAccess {
 extension Hit {
     var isFolder: Bool {
         kind == "dir"
-            && !(UTType(filenameExtension: url.pathExtension)?.conforms(to: .package) ?? false)
+            && !(UTType(filenameExtension: url.pathExtension, conformingTo: .directory)?
+                .conforms(to: .package) ?? false)
     }
     var typeName: String {
         if kind == "dir" { return isFolder ? "Folder" : "Application / Package" }

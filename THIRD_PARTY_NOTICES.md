@@ -7,7 +7,10 @@ FinderSearch's filename search is powered by **fsearch**, created by **Noah Dunn
 - Vendored revision: `e96ebeb52545ea4facd4a4b3af393c42c980fb5d`
 - License: [MIT](vendor/fsearch/LICENSE)
 
-The upstream source is retained in `vendor/fsearch` without modifications. Its
+The upstream source is retained in `vendor/fsearch` with one local build fix:
+`NameTable::dense` explicitly selects `Vec<Short>` for the `lazy` helper so
+Rust 1.93.1 does not infer the returned slice type for its `OnceLock` argument.
+Search behavior is unchanged. Its
 copyright and license notice are included in every built app at
 `Contents/Resources/fsearch-LICENSE`. `vendor/fsearch/Cargo.lock` records its Rust
 dependencies; the build uses locked dependency resolution.

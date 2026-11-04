@@ -2,6 +2,12 @@
 
 # FinderSearch
 
+This personal fork adds **Copy Path → Shift-Command-C** in the Edit menu,
+with a customizable shortcut in **FinderSearch → Settings**, and
+opens application bundles instead of browsing their contents. It is based on
+[zeusinsight/FinderSearch](https://github.com/zeusinsight/FinderSearch).
+Build and launch this fork with `./script/build_and_run.sh`.
+
 A native Mac file browser with fast, fuzzy filename search. Browse folders,
 preview files, and manage your files in a familiar macOS interface.
 
@@ -60,7 +66,7 @@ Requires **macOS 15+**, **Xcode 16+ or compatible Command Line Tools**, and
 **Rust 1.85+ / Cargo**.
 
 ```sh
-git clone https://github.com/zeusinsight/FinderSearch.git
+git clone https://github.com/gityeop/FinderSearch.git
 cd FinderSearch
 ./scripts/build.sh
 open dist/FinderSearch.app

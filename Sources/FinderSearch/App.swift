@@ -7,6 +7,8 @@ import UniformTypeIdentifiers
     @Environment(\.openWindow) private var openWindow
     @FocusedObject private var model: SearchModel?
     @FocusedObject private var workspace: BrowserWorkspace?
+    @AppStorage(CopyPathShortcut.keyPreference) private var copyPathKey = CopyPathShortcut.defaultKey
+    @AppStorage(CopyPathShortcut.modifiersPreference) private var copyPathModifiers = CopyPathShortcut.defaultModifiers
     var body: some Scene {
         WindowGroup(id: "browser") {
             BrowserRoot().frame(minWidth: 850, minHeight: 470).onAppear {
@@ -39,6 +41,11 @@ import UniformTypeIdentifiers
             CommandGroup(replacing: .pasteboard) {
                 Button("Cut") { textOrFile("cut:") { model?.cut() } }.keyboardShortcut("x")
                 Button("Copy") { textOrFile("copy:") { model?.copy() } }.keyboardShortcut("c")
+                Button("Copy Path") { model?.copyPath() }
+                    .keyboardShortcut(
+                        KeyEquivalent(Character(copyPathKey)),
+                        modifiers: CopyPathShortcut.eventModifiers(copyPathModifiers))
+                    .disabled(model?.selection.isEmpty != false)
                 Button("Paste Items") { textOrFile("paste:") { model?.paste() } }.keyboardShortcut(
                     "v")
                 Button("Move Items Here") { model?.paste(move: true) }.keyboardShortcut(
@@ -102,6 +109,7 @@ import UniformTypeIdentifiers
                 }.keyboardShortcut("f")
             }
         }
+        Settings { ShortcutSettingsView() }
     }
     private func textOrFile(_ selector: String, action: () -> Void) {
         if NSApp.keyWindow?.firstResponder is NSTextView {
