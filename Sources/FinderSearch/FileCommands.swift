@@ -60,11 +60,17 @@ extension SearchModel {
         guard !busy else { return }
         (clipboard ?? .shared).write(selectedItems.map(\.url), cut: true)
     }
-    func copyPath() {
-        NSPasteboard.general.clearContents();
-        NSPasteboard.general.setString(
-            selectedItems.map(\.path).joined(separator: "\n"), forType: .string)
-        FileClipboard.shared.refresh()
+    func copyPath(clipboard: FileClipboard? = nil) {
+        let paths = selectedItems.map(\.path)
+        guard !paths.isEmpty else { return }
+        let clipboard = clipboard ?? .shared
+        clipboard.pasteboard.clearContents()
+        guard clipboard.pasteboard.setString(paths.joined(separator: "\n"), forType: .string) else {
+            error = "Could not copy the path. Please try again."
+            return
+        }
+        clipboard.refresh()
+        copyPathConfirmation = UUID()
     }
     func paste(move: Bool = false, clipboard: FileClipboard? = nil) {
         guard canWriteHere, !busy else { return }

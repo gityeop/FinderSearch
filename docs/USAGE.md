@@ -118,7 +118,8 @@ not intentionally download cloud file contents.
   yet support content-query syntax. Footer timing measures engine work, excluding
   debounce, IPC, and rendering.
 - **Select and preview:** click, Command-click, or Shift-click; double-click or
-  Command-O opens, Space/Command-Y uses Quick Look, and Return renames.
+  Enter/Command-O opens, Space/Command-Y uses Quick Look, and F2 renames.
+  Enter and F2 apply while browsing files; Enter still submits searches and saves edited names.
   In Quick Look, arrow keys browse the current selection (or visible files); Space closes it.
 - **File actions:** Command-C copies file URLs, Command-V copies items, and
   Option-Command-V moves them. Folder drops move; Option-drag copies. Conflicts
@@ -131,8 +132,9 @@ not intentionally download cloud file contents.
   while editing text it remains a text-editing command. Command-Z and
   Shift-Command-Z undo/redo file actions and tags. History is in memory per tab.
 - **Other actions:** Get Info, Duplicate, Copy Path (Shift-Command-C), tags, sharing, and revealing in Finder.
-  Change the Copy Path shortcut in **FinderSearch → Settings** (Command-comma),
-  or use **Restore Default** to return to Shift-Command-C.
+  A brief light-green “Path copied” notification appears at the top center after copying.
+  Change Open Selected, Rename, and Copy Path shortcuts in **FinderSearch → Settings**
+  (Command-comma), or use **Restore Defaults** to restore Enter, F2, and Shift-Command-C.
   Open With lists compatible applications and offers an application chooser.
   Compress creates a ZIP; Extract ZIP creates a uniquely named folder beside the archive.
   Standard, unencrypted ZIPs are supported; ZIP64, symbolic links, and special files are rejected.

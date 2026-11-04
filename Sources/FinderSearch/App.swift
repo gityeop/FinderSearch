@@ -7,8 +7,8 @@ import UniformTypeIdentifiers
     @Environment(\.openWindow) private var openWindow
     @FocusedObject private var model: SearchModel?
     @FocusedObject private var workspace: BrowserWorkspace?
-    @AppStorage(CopyPathShortcut.keyPreference) private var copyPathKey = CopyPathShortcut.defaultKey
-    @AppStorage(CopyPathShortcut.modifiersPreference) private var copyPathModifiers = CopyPathShortcut.defaultModifiers
+    @AppStorage(BrowserShortcutAction.copyPath.keyPreference) private var copyPathKey = BrowserShortcutAction.copyPath.defaultKey
+    @AppStorage(BrowserShortcutAction.copyPath.modifiersPreference) private var copyPathModifiers = BrowserShortcutAction.copyPath.defaultModifiers
     var body: some Scene {
         WindowGroup(id: "browser") {
             BrowserRoot().frame(minWidth: 850, minHeight: 470).onAppear {
@@ -44,7 +44,7 @@ import UniformTypeIdentifiers
                 Button("Copy Path") { model?.copyPath() }
                     .keyboardShortcut(
                         KeyEquivalent(Character(copyPathKey)),
-                        modifiers: CopyPathShortcut.eventModifiers(copyPathModifiers))
+                        modifiers: BrowserShortcut.eventModifiers(copyPathModifiers))
                     .disabled(model?.selection.isEmpty != false)
                 Button("Paste Items") { textOrFile("paste:") { model?.paste() } }.keyboardShortcut(
                     "v")
@@ -239,6 +239,21 @@ struct BrowserView: View {
             .searchFocused($keyboardFocus, equals: .search)
             .onSubmit(of: .search) { model.submitSearch() }
         }
+        .overlay(alignment: .top) {
+            if let confirmation = model.copyPathConfirmation {
+                Label("Path copied", systemImage: "checkmark.circle.fill")
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(Color(red: 0.12, green: 0.32, blue: 0.12))
+                    .padding(.horizontal, 16).padding(.vertical, 10)
+                    .background(Color(red: 0.76, green: 0.98, blue: 0.74), in: Capsule())
+                    .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
+                    .padding(.top, 12).allowsHitTesting(false)
+                    .task(id: confirmation) {
+                        do { try await Task.sleep(for: .seconds(1.6)) } catch { return }
+                        model.copyPathConfirmation = nil
+                    }
+            }
+        }
         .background(BrowserWindowCapture { browserWindow = $0 }.frame(width: 0, height: 0))
         .background(
             MouseNavigationTarget { command in
@@ -317,9 +332,12 @@ struct BrowserView: View {
                 fileNavigationActive && !searchFocused,
                 !(NSApp.keyWindow?.firstResponder is NSTextView)
             else { return event }
+            if let action = BrowserShortcutAction.navigationAction(for: event) {
+                if action == .open { model.open() } else { model.renameItems() }
+                return nil
+            }
             if event.modifierFlags.intersection([.command, .control, .option]).isEmpty {
                 if event.keyCode == 49 { model.preview = model.selected; return nil }
-                if event.keyCode == 36 { model.rename(); return nil }
                 if event.keyCode == 53 { model.selection = []; return nil }
                 if (model.viewMode == .icons || model.viewMode == .gallery
                     || (model.viewMode == .columns && [125, 126].contains(event.keyCode))),

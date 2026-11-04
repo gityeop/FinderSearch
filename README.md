@@ -2,8 +2,9 @@
 
 # FinderSearch
 
-This personal fork adds **Copy Path → Shift-Command-C** in the Edit menu,
-with a customizable shortcut in **FinderSearch → Settings**, and
+This personal fork adds **Enter → Open Selected**, **F2 → Rename**, and
+**Copy Path → Shift-Command-C**, with customizable shortcuts in
+**FinderSearch → Settings** and a brief confirmation after copying a path. It
 opens application bundles instead of browsing their contents. It is based on
 [zeusinsight/FinderSearch](https://github.com/zeusinsight/FinderSearch).
 Build and launch this fork with `./script/build_and_run.sh`.

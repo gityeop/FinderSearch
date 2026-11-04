@@ -1,11 +1,43 @@
 import AppKit
 import SwiftUI
 
-enum CopyPathShortcut {
-    static let keyPreference = "copyPathShortcutKey"
-    static let modifiersPreference = "copyPathShortcutModifiers"
-    static let defaultKey = "c"
-    static let defaultModifiers = Int(NSEvent.ModifierFlags([.command, .shift]).rawValue)
+enum BrowserShortcutAction: String, CaseIterable, Identifiable {
+    case open, rename, copyPath
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .open: return "Open Selected"
+        case .rename: return "Rename"
+        case .copyPath: return "Copy Path"
+        }
+    }
+    var keyPreference: String { rawValue + "ShortcutKey" }
+    var modifiersPreference: String { rawValue + "ShortcutModifiers" }
+    var defaultKey: String {
+        switch self {
+        case .open: return "\r"
+        case .rename: return "\u{f705}"
+        case .copyPath: return "c"
+        }
+    }
+    var defaultModifiers: Int {
+        self == .copyPath ? Int(NSEvent.ModifierFlags([.command, .shift]).rawValue) : 0
+    }
+    func shortcut(in defaults: UserDefaults = .standard) -> BrowserShortcut {
+        BrowserShortcut(
+            key: defaults.string(forKey: keyPreference) ?? defaultKey,
+            modifiers: defaults.object(forKey: modifiersPreference) as? Int ?? defaultModifiers)
+    }
+    static func navigationAction(for event: NSEvent, in defaults: UserDefaults = .standard)
+        -> BrowserShortcutAction?
+    {
+        [.open, .rename].first { $0.shortcut(in: defaults).matches(event) }
+    }
+}
+
+struct BrowserShortcut {
+    let key: String
+    let modifiers: Int
 
     static func eventModifiers(_ rawValue: Int) -> EventModifiers {
         let flags = NSEvent.ModifierFlags(rawValue: UInt(rawValue))
@@ -16,38 +48,76 @@ enum CopyPathShortcut {
         if flags.contains(.command) { result.insert(.command) }
         return result
     }
-
-    static func title(key: String, modifiers: Int) -> String {
+    static func key(for event: NSEvent) -> String? {
+        if event.keyCode == 36 || event.keyCode == 76 { return "\r" }
+        return event.charactersIgnoringModifiers?.lowercased()
+    }
+    static func flags(for event: NSEvent) -> NSEvent.ModifierFlags {
+        event.modifierFlags.intersection([.command, .option, .control, .shift])
+    }
+    static func allowsUnmodified(_ key: String) -> Bool {
+        key == "\r" || key.unicodeScalars.count == 1
+            && (0xf704...0xf726).contains(key.unicodeScalars.first!.value)
+    }
+    func matches(_ event: NSEvent) -> Bool {
+        Self.key(for: event) == key && Int(Self.flags(for: event).rawValue) == modifiers
+    }
+    var title: String {
         let flags = NSEvent.ModifierFlags(rawValue: UInt(modifiers))
+        let name: String
+        if key == "\r" {
+            name = "Enter"
+        } else if let scalar = key.unicodeScalars.first, (0xf704...0xf726).contains(scalar.value) {
+            name = "F\(scalar.value - 0xf704 + 1)"
+        } else {
+            name = key.uppercased()
+        }
         return (flags.contains(.control) ? "⌃" : "")
             + (flags.contains(.option) ? "⌥" : "")
             + (flags.contains(.shift) ? "⇧" : "")
-            + (flags.contains(.command) ? "⌘" : "") + key.uppercased()
+            + (flags.contains(.command) ? "⌘" : "") + name
     }
 }
 
 struct ShortcutSettingsView: View {
-    @AppStorage(CopyPathShortcut.keyPreference) private var key = CopyPathShortcut.defaultKey
-    @AppStorage(CopyPathShortcut.modifiersPreference) private var modifiers = CopyPathShortcut.defaultModifiers
-
     var body: some View {
         Form {
-            LabeledContent("Copy Path") {
-                ShortcutRecorder(key: $key, modifiers: $modifiers).frame(width: 190, height: 28)
+            ForEach(BrowserShortcutAction.allCases) { action in
+                ShortcutSettingRow(action: action)
             }
-            Text("Click the shortcut, then press a new combination with Command, Option, or Control. Escape cancels.")
+            Text("Click a shortcut, then press a new combination. Enter and function keys can be used on their own. Escape cancels.")
                 .font(.callout).foregroundStyle(.secondary)
-            Button("Restore Default") {
-                key = CopyPathShortcut.defaultKey
-                modifiers = CopyPathShortcut.defaultModifiers
+            Button("Restore Defaults") {
+                for action in BrowserShortcutAction.allCases {
+                    UserDefaults.standard.removeObject(forKey: action.keyPreference)
+                    UserDefaults.standard.removeObject(forKey: action.modifiersPreference)
+                }
             }
-            .disabled(key == CopyPathShortcut.defaultKey && modifiers == CopyPathShortcut.defaultModifiers)
         }
-        .padding(24).frame(width: 440).navigationTitle("Keyboard Shortcuts")
+        .padding(24).frame(width: 500).navigationTitle("Keyboard Shortcuts")
+    }
+}
+
+private struct ShortcutSettingRow: View {
+    let action: BrowserShortcutAction
+    @AppStorage private var key: String
+    @AppStorage private var modifiers: Int
+
+    init(action: BrowserShortcutAction) {
+        self.action = action
+        _key = AppStorage(wrappedValue: action.defaultKey, action.keyPreference)
+        _modifiers = AppStorage(wrappedValue: action.defaultModifiers, action.modifiersPreference)
+    }
+    var body: some View {
+        LabeledContent(action.title) {
+            ShortcutRecorder(label: action.title, key: $key, modifiers: $modifiers)
+                .frame(width: 190, height: 28)
+        }
     }
 }
 
 private struct ShortcutRecorder: NSViewRepresentable {
+    let label: String
     @Binding var key: String
     @Binding var modifiers: Int
 
@@ -56,13 +126,13 @@ private struct ShortcutRecorder: NSViewRepresentable {
         button.bezelStyle = .rounded
         button.target = button
         button.action = #selector(ShortcutRecorderButton.beginRecording)
-        button.setAccessibilityLabel("Copy Path shortcut")
+        button.setAccessibilityLabel("\(label) shortcut")
         return button
     }
-
     func updateNSView(_ button: ShortcutRecorderButton, context: Context) {
-        button.shortcutTitle = CopyPathShortcut.title(key: key, modifiers: modifiers)
+        button.shortcutTitle = BrowserShortcut(key: key, modifiers: modifiers).title
         if !button.recording { button.title = button.shortcutTitle }
+        button.setAccessibilityValue(button.title)
         button.onRecord = { newKey, newModifiers in
             key = newKey
             modifiers = newModifiers
@@ -80,38 +150,37 @@ private final class ShortcutRecorderButton: NSButton {
         window?.makeFirstResponder(self)
         recording = true
         title = "Press shortcut…"
+        setAccessibilityValue(title)
     }
-
     override func resignFirstResponder() -> Bool {
         finishRecording()
         return super.resignFirstResponder()
     }
-
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if recording { record(event); return true }
         return super.performKeyEquivalent(with: event)
     }
-
     override func keyDown(with event: NSEvent) {
         if recording { record(event) } else { super.keyDown(with: event) }
     }
-
     private func record(_ event: NSEvent) {
         if event.keyCode == 53 { finishRecording(); return }
-        let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
-        guard !flags.intersection([.command, .option, .control]).isEmpty,
-            let key = event.charactersIgnoringModifiers?.lowercased(), key.count == 1
+        let flags = BrowserShortcut.flags(for: event)
+        guard let key = BrowserShortcut.key(for: event), key.count == 1,
+            BrowserShortcut.allowsUnmodified(key)
+                || !flags.intersection([.command, .option, .control]).isEmpty
         else {
             title = "Include ⌘, ⌥ or ⌃"
+            setAccessibilityValue(title)
             return
         }
         onRecord?(key, Int(flags.rawValue))
-        shortcutTitle = CopyPathShortcut.title(key: key, modifiers: Int(flags.rawValue))
+        shortcutTitle = BrowserShortcut(key: key, modifiers: Int(flags.rawValue)).title
         finishRecording()
     }
-
     private func finishRecording() {
         recording = false
         title = shortcutTitle
+        setAccessibilityValue(title)
     }
 }

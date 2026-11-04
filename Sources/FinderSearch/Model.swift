@@ -72,6 +72,7 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
     @Published var loading = false
     @Published private(set) var sorting = false
     @Published var error: String?
+    @Published var copyPathConfirmation: UUID?
     @Published var ready = false
     @Published var entries = 0
     @Published var fullDiskAccess = false
