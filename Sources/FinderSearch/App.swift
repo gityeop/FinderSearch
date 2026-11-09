@@ -109,7 +109,7 @@ import UniformTypeIdentifiers
                 }.keyboardShortcut("f")
             }
         }
-        Settings { ShortcutSettingsView() }
+        Settings { SettingsView() }.windowResizability(.contentSize)
     }
     private func textOrFile(_ selector: String, action: () -> Void) {
         if NSApp.keyWindow?.firstResponder is NSTextView {

@@ -883,7 +883,10 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
                 let saved = FavoriteFolders.load(from: self.favoritesDefaults)
                 if self.favorites != saved { self.favorites = saved }
             }
-        if let data = sessionDefaults?.data(forKey: WorkspaceSession.key),
+        if let sessionDefaults, let folder = StartupFolderPreferences.folder(in: sessionDefaults) {
+            tabs[0].navigate(folder, history: false)
+            selectedTab = tabs[0].id
+        } else if let data = sessionDefaults?.data(forKey: WorkspaceSession.key),
             let state = try? JSONDecoder().decode(WorkspaceSession.self, from: data),
             !state.tabs.isEmpty, state.tabs.count <= 50
         {

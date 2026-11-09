@@ -101,6 +101,12 @@ not intentionally download cloud file contents.
 
 ## Usage
 
+- **Settings:** Command-comma opens a sidebar-based settings window.
+  In **General → Open new windows to**, choose Last session, Home, Desktop, Documents,
+  Downloads, Applications, or Choose folder. A chosen folder opens in a single tab
+  on launch and in new windows; existing windows and explicitly opened tabs stay in place.
+  Last session restores the previous tabs, selections, and scroll positions.
+  Keyboard shortcuts are grouped under **Keyboard shortcuts**.
 - **Browse:** icons, sortable list, columns, and gallery via Command-1 through Command-4.
   Back/forward/up navigation, a path bar, favorites, mounted volumes, and iCloud's local folder.
   Eject buttons beside external/removable volumes and disk images safely unmount them.

@@ -81,12 +81,14 @@ struct BrowserShortcut {
 
 struct ShortcutSettingsView: View {
     var body: some View {
-        Form {
+        VStack(alignment: .leading, spacing: 0) {
             ForEach(BrowserShortcutAction.allCases) { action in
-                ShortcutSettingRow(action: action)
+                ShortcutSettingRow(action: action).padding(.vertical, 14)
+                Divider()
             }
             Text("Click a shortcut, then press a new combination. Enter and function keys can be used on their own. Escape cancels.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.system(size: 12)).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true).padding(.vertical, 20)
             Button("Restore Defaults") {
                 for action in BrowserShortcutAction.allCases {
                     UserDefaults.standard.removeObject(forKey: action.keyPreference)
@@ -94,7 +96,6 @@ struct ShortcutSettingsView: View {
                 }
             }
         }
-        .padding(24).frame(width: 500).navigationTitle("Keyboard Shortcuts")
     }
 }
 
@@ -109,9 +110,11 @@ private struct ShortcutSettingRow: View {
         _modifiers = AppStorage(wrappedValue: action.defaultModifiers, action.modifiersPreference)
     }
     var body: some View {
-        LabeledContent(action.title) {
+        HStack(spacing: 16) {
+            Text(action.title).font(.system(size: 13))
+            Spacer()
             ShortcutRecorder(label: action.title, key: $key, modifiers: $modifiers)
-                .frame(width: 190, height: 28)
+                .frame(width: 155, height: 28)
         }
     }
 }
