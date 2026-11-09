@@ -332,18 +332,21 @@ final class QualityOfLifeTests: XCTestCase {
         XCTAssertFalse(LocalFiles.exists(destination))
     }
     @MainActor func testTabShortcutsDoNotInterceptTypingOrOtherCommands() throws {
+        let suite = "FinderSearch.tab-shortcut-test." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
         func event(_ flags: NSEvent.ModifierFlags, code: UInt16 = 17) throws -> NSEvent {
             try XCTUnwrap(
                 NSEvent.keyEvent(
                     with: .keyDown, location: .zero, modifierFlags: flags,
-                    timestamp: 0, windowNumber: 0, context: nil, characters: "t",
-                    charactersIgnoringModifiers: "t", isARepeat: false, keyCode: code))
+                    timestamp: 0, windowNumber: 0, context: nil, characters: code == 17 ? "t" : "q",
+                    charactersIgnoringModifiers: code == 17 ? "t" : "q", isARepeat: false, keyCode: code))
         }
-        XCTAssertEqual(TabShortcut.command(for: try event(.command)), .new)
-        XCTAssertEqual(TabShortcut.command(for: try event([.command, .shift])), .reopen)
-        XCTAssertNil(TabShortcut.command(for: try event([])))
-        XCTAssertNil(TabShortcut.command(for: try event([.command, .option])))
-        XCTAssertNil(TabShortcut.command(for: try event(.command, code: 12)))
+        XCTAssertEqual(TabShortcut.command(for: try event(.command), in: defaults), .new)
+        XCTAssertEqual(TabShortcut.command(for: try event([.command, .shift]), in: defaults), .reopen)
+        XCTAssertNil(TabShortcut.command(for: try event([]), in: defaults))
+        XCTAssertNil(TabShortcut.command(for: try event([.command, .option]), in: defaults))
+        XCTAssertNil(TabShortcut.command(for: try event(.command, code: 12), in: defaults))
     }
     @MainActor func testScrollPositionPersistsWithoutInvalidatingBrowser() async throws {
         let suite = "FinderSearch.tests." + UUID().uuidString

@@ -16,12 +16,14 @@ struct SearchSettingsView: View {
                     })
             }
             Divider()
-            Text("Excluded folders and patterns").font(.system(size: 13, weight: .medium))
-                .padding(.top, 30)
+            Text("Excluded folders and patterns").font(
+                .system(size: SettingsStyle.bodyFontSize, weight: .medium)
+            )
+            .padding(.top, 30)
             VStack(spacing: 0) {
                 ForEach(rules, id: \.self) { rule in
                     HStack {
-                        Text(rule).font(.system(size: 12, design: .monospaced)).lineLimit(1)
+                        Text(rule).font(SettingsStyle.bodyFont).lineLimit(1)
                             .truncationMode(.middle)
                         Spacer()
                         Button {

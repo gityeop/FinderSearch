@@ -3,23 +3,26 @@
 # FinderSearch
 
 This personal fork adds **Enter → Open Selected**, **F2 → Rename**, and
-**Copy Path → Shift-Command-C**, with customizable shortcuts in
+**Copy Path → Shift-Command-C**, with 25 customizable shortcuts in
 **FinderSearch → Settings** and a brief confirmation after copying a path. It
 opens application bundles instead of browsing their contents. It is based on
 [zeusinsight/FinderSearch](https://github.com/zeusinsight/FinderSearch).
 Build and launch this fork with `./script/build_and_run.sh`.
 Choose a startup folder or restore your last session in **Settings → General**.
-Settings uses a sidebar with General, Appearance, Search, and Keyboard shortcuts pages.
+Settings opens inside the browser as a modal with General, Appearance, Search,
+and Keyboard shortcuts pages. It uses larger system text and keeps the browser
+inactive while open. Shortcut changes update the menu bindings; duplicate keys
+are rejected before saving.
 Set default views and sorting, remember per-folder choices, and configure search scope
 and exclusion patterns. Press **Command-L** to edit the folder address.
 
 A native Mac file browser with fast, fuzzy filename search. Browse folders,
 preview files, and manage your files in a familiar macOS interface.
 
-**[Download for Apple Silicon](https://github.com/zeusinsight/FinderSearch/releases/latest)**
+**[Download for Apple Silicon](https://github.com/gityeop/FinderSearch/releases/latest)**
 · macOS 15+
 · [Usage & shortcuts](docs/USAGE.md)
-· [Release notes](https://github.com/zeusinsight/FinderSearch/releases)
+· [Release notes](https://github.com/gityeop/FinderSearch/releases)
 
 ![FinderSearch demo with the sidebar visible: type a filename and see search results narrow](docs/images/findersearch-demo.gif)
 
@@ -48,8 +51,8 @@ your files aren't uploaded.
 3. Enable **Full Disk Access** in **System Settings → Privacy & Security** to
    search protected folders, then quit and reopen the app.
 
-The app is not yet Developer ID-signed or notarized. If macOS blocks it, choose
-**Privacy & Security → Open Anyway**. Allow the first search index to finish building.
+Published DMG and ZIP releases are Developer ID-signed and notarized by Apple.
+Allow the first search index to finish building.
 
 [Permissions and troubleshooting →](docs/USAGE.md#permissions-and-indexing)
 
@@ -81,6 +84,14 @@ The build bundles fsearch automatically. Run tests with `swift test -c release`.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development checks and the code layout.
 Apple Silicon is verified; Intel builds remain unverified.
 
+## Build a release
+
+Set `APPLE_SIGN_IDENTITY` to your Developer ID Application identity and
+`APPLE_NOTARY_PROFILE` to your notarytool keychain profile, then run
+`./scripts/release.sh`. It signs the app and helper with Hardened Runtime,
+notarizes and staples the app and DMG, and writes DMG, ZIP, and SHA-256 checksums
+to `dist/`. The ordinary build script uses ad-hoc signing for local development.
+
 ## Current limits
 
 FinderSearch is still early. Content search, AirDrop, Finder extensions, saved
@@ -90,6 +101,7 @@ Slow disks and cloud providers can still take time.
 ## License & credits
 
 [MIT](LICENSE). The search engine is [fsearch](https://github.com/noahdunnagan/fsearch)
-by [Noah Dunnagan](https://github.com/noahdunnagan), vendored unmodified at v0.2.0
+by [Noah Dunnagan](https://github.com/noahdunnagan), vendored at v0.2.0 with a
+documented Rust build fix
 under its MIT license. FinderSearch adds the native interface and file workflows.
 See [third-party notices](THIRD_PARTY_NOTICES.md).

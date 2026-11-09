@@ -144,7 +144,7 @@ final class ThumbnailScrollTests: XCTestCase {
             contentRect: NSRect(x: 0, y: 0, width: 1100, height: 800), styleMask: [.titled],
             backing: .buffered, defer: false)
         window.contentView = NSHostingView(
-            rootView: BrowserView(workspace: workspace, model: model))
+            rootView: BrowserView(workspace: workspace, model: model, presentation: BrowserPresentation()))
         window.orderFront(nil)
         defer { window.orderOut(nil) }
         RunLoop.main.run(until: Date().addingTimeInterval(1.5))

@@ -59,6 +59,7 @@ import AppKit
         return scroll
     }
     func updateNSView(_ view: NSScrollView, context: Context) {
+        context.coordinator.table?.marquee.inputEnabled = context.environment.isEnabled
         context.coordinator.parent = self
         context.coordinator.update()
     }

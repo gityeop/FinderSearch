@@ -3,11 +3,10 @@ import AppKit
 
 enum TabShortcut {
     case new, reopen
-    static func command(for event: NSEvent) -> Self? {
-        guard event.keyCode == 17, event.modifierFlags.contains(.command),
-            event.modifierFlags.intersection([.option, .control]).isEmpty
-        else { return nil }
-        return event.modifierFlags.contains(.shift) ? .reopen : .new
+    static func command(for event: NSEvent, in defaults: UserDefaults = .standard) -> Self? {
+        if BrowserShortcutAction.newTab.shortcut(in: defaults).matches(event) { return .new }
+        if BrowserShortcutAction.reopenClosedTab.shortcut(in: defaults).matches(event) { return .reopen }
+        return nil
     }
 }
 
@@ -34,9 +33,13 @@ final class WindowCaptureView: NSView {
 struct MiddleClickTarget: NSViewRepresentable {
     var action: () -> Void
     func makeNSView(context: Context) -> MiddleClickView { MiddleClickView(action: action) }
-    func updateNSView(_ view: MiddleClickView, context: Context) { view.action = action }
+    func updateNSView(_ view: MiddleClickView, context: Context) {
+        view.action = action
+        view.inputEnabled = context.environment.isEnabled
+    }
 }
 final class MiddleClickView: NSView {
+    var inputEnabled = true
     var action: () -> Void
     private var monitor: Any?
     init(action: @escaping () -> Void) { self.action = action; super.init(frame: .zero) }
@@ -46,7 +49,7 @@ final class MiddleClickView: NSView {
         if let monitor { NSEvent.removeMonitor(monitor); self.monitor = nil }
         guard window != nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .otherMouseDown) { [weak self] event in
-            guard let self, event.buttonNumber == 2, event.window === self.window,
+            guard let self, self.inputEnabled, event.buttonNumber == 2, event.window === self.window,
                 self.bounds.contains(self.convert(event.locationInWindow, from: nil))
             else { return event }
             self.action(); return nil

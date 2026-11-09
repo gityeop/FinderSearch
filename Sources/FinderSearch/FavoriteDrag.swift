@@ -7,12 +7,16 @@ struct FavoriteDragTarget: NSViewRepresentable {
     let move: (String, String) -> Void
     func makeNSView(context: Context) -> FavoriteDragView { FavoriteDragView() }
     func updateNSView(_ view: FavoriteDragView, context: Context) {
+        view.inputEnabled = context.environment.isEnabled
         view.path = path
         view.move = move
     }
 }
 
 final class FavoriteDragView: NSView {
+    var inputEnabled = true {
+        didSet { if oldValue && !inputEnabled { reset() } }
+    }
     private static let rows = NSHashTable<FavoriteDragView>.weakObjects()
     var path = ""
     var move: (String, String) -> Void = { _, _ in }
@@ -40,6 +44,7 @@ final class FavoriteDragView: NSView {
     }
 
     @discardableResult func handle(_ event: NSEvent) -> Bool {
+        guard inputEnabled else { return false }
         guard let window, event.window === window else {
             if event.type == .leftMouseUp { reset() }
             return false

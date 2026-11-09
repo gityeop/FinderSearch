@@ -2,7 +2,11 @@
 set -euo pipefail
 cd "${0:A:h:h}"
 
-./scripts/build.sh
+case "${1:-}" in
+    '') ./scripts/build.sh ;;
+    --skip-build) ;;
+    *) print -u2 'Usage: package-dmg.sh [--skip-build]'; exit 2 ;;
+esac
 
 app="$PWD/dist/FinderSearch.app"
 version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")
@@ -24,19 +28,16 @@ Requires macOS 15 or newer and a compatible Mac.
 
 1. Drag FinderSearch into Applications.
 2. Eject this disk image and open FinderSearch from Applications.
-3. If macOS blocks the app, open System Settings > Privacy & Security,
-   click Open Anyway for FinderSearch, and confirm.
-4. To search protected folders, enable FinderSearch in System Settings >
+3. To search protected folders, enable FinderSearch in System Settings >
    Privacy & Security > Full Disk Access, then quit and reopen the app.
 
 The first launch builds the search index. Give it time before judging search.
 No Xcode, Rust, or separate fsearch installation is needed.
 
-This early release uses an ad-hoc signature. It is not Developer ID-signed
-or notarized by Apple. Search and file data stay on your Mac.
+Search and file data stay on your Mac.
 
 Source, licenses, and bug reports:
-https://github.com/zeusinsight/FinderSearch
+https://github.com/gityeop/FinderSearch
 TEXT
 
 name="FinderSearch-$version-$platform.dmg"

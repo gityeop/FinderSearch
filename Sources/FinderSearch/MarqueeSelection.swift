@@ -67,6 +67,7 @@ private struct MarqueeOverlay: NSViewRepresentable {
 
     func makeNSView(context: Context) -> MarqueeSelectionView { MarqueeSelectionView() }
     func updateNSView(_ view: MarqueeSelectionView, context: Context) {
+        view.inputEnabled = context.environment.isEnabled
         view.configure(model: model, identity: model.route + ":" + model.query)
         view.itemFrames = frames
         view.focusFiles = focusFiles
@@ -77,6 +78,9 @@ private struct MarqueeOverlay: NSViewRepresentable {
 /// Observe only background mouse sequences. Returning nil from hitTest leaves
 /// file clicks, contextual menus and native file dragging with their existing views.
 @MainActor final class MarqueeSelectionView: NSView {
+    var inputEnabled = true {
+        didSet { if oldValue && !inputEnabled { stop() } }
+    }
     var itemFrames: [String: CGRect] = [:]
     var focusFiles: () -> Void = {}
     weak var table: NSTableView?
@@ -124,7 +128,7 @@ private struct MarqueeOverlay: NSViewRepresentable {
     }
 
     func handle(_ event: NSEvent) -> NSEvent? {
-        guard let model, event.window === window, window != nil, !isHiddenOrHasHiddenAncestor else {
+        guard inputEnabled, let model, event.window === window, window != nil, !isHiddenOrHasHiddenAncestor else {
             return event
         }
         if event.type == .keyDown {

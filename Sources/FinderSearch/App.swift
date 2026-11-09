@@ -7,8 +7,7 @@ import UniformTypeIdentifiers
     @Environment(\.openWindow) private var openWindow
     @FocusedObject private var model: SearchModel?
     @FocusedObject private var workspace: BrowserWorkspace?
-    @AppStorage(BrowserShortcutAction.copyPath.keyPreference) private var copyPathKey = BrowserShortcutAction.copyPath.defaultKey
-    @AppStorage(BrowserShortcutAction.copyPath.modifiersPreference) private var copyPathModifiers = BrowserShortcutAction.copyPath.defaultModifiers
+    @FocusedObject private var presentation: BrowserPresentation?
     var body: some Scene {
         WindowGroup(id: "browser") {
             BrowserRoot().frame(minWidth: 850, minHeight: 470).onAppear {
@@ -18,17 +17,19 @@ import UniformTypeIdentifiers
         }
         .defaultSize(width: 1050, height: 680).windowToolbarStyle(.unified)
         .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") { presentation?.isSettingsPresented = true }
+                    .configurableShortcut(.settings).disabled(presentation == nil)
+            }
             CommandGroup(replacing: .newItem) {
-                Button("New Window") { openWindow(id: "browser") }.keyboardShortcut("n")
-                Button("New Tab") { workspace?.newTab() }.keyboardShortcut("t")
+                Button("New Window") { openWindow(id: "browser") }.configurableShortcut(.newWindow)
+                    .disabled(presentation?.isSettingsPresented == true)
+                Button("New Tab") { workspace?.newTab() }.configurableShortcut(.newTab)
                 Button("Reopen Closed Tab") { workspace?.reopenClosedTab() }
-                    .keyboardShortcut("t", modifiers: [.command, .shift])
+                    .configurableShortcut(.reopenClosedTab)
                     .disabled(workspace?.closedTabs.isEmpty != false)
-                Button("New Folder") { model?.newFolder() }.keyboardShortcut(
-                    "n", modifiers: [.command, .shift]
-                ).disabled(model?.busy != false || model?.canWriteHere != true)
-                Button("Open…") { model?.chooseFolder() }.keyboardShortcut(
-                    "o", modifiers: [.command, .option])
+                Button("New Folder") { model?.newFolder() }.configurableShortcut(.newFolder).disabled(model?.busy != false || model?.canWriteHere != true)
+                Button("Open…") { model?.chooseFolder() }.configurableShortcut(.chooseFolder)
             }
             CommandGroup(replacing: .undoRedo) {
                 Button(model?.undoStack.last.map { "Undo \($0.name)" } ?? "Undo") {
@@ -42,9 +43,7 @@ import UniformTypeIdentifiers
                 Button("Cut") { textOrFile("cut:") { model?.cut() } }.keyboardShortcut("x")
                 Button("Copy") { textOrFile("copy:") { model?.copy() } }.keyboardShortcut("c")
                 Button("Copy Path") { model?.copyPath() }
-                    .keyboardShortcut(
-                        KeyEquivalent(Character(copyPathKey)),
-                        modifiers: BrowserShortcut.eventModifiers(copyPathModifiers))
+                    .configurableShortcut(.copyPath)
                     .disabled(model?.selection.isEmpty != false)
                 Button("Paste Items") { textOrFile("paste:") { model?.paste() } }.keyboardShortcut(
                     "v")
@@ -58,9 +57,9 @@ import UniformTypeIdentifiers
                 }.keyboardShortcut("a")
             }
             CommandGroup(after: .newItem) {
-                Button("Open Selected") { model?.open() }.keyboardShortcut("o").disabled(
+                Button("Open Selected") { model?.open() }.configurableShortcut(.open).disabled(
                     model?.selection.isEmpty != false)
-                Button("Rename…") { model?.renameItems() }.disabled(
+                Button("Rename…") { model?.renameItems() }.configurableShortcut(.rename).disabled(
                     model?.selection.isEmpty != false || model?.busy == true)
                 Button("Compress") { model?.compress() }.disabled(
                     model?.selection.isEmpty != false || model?.busy == true
@@ -68,31 +67,30 @@ import UniformTypeIdentifiers
                 Button("Extract ZIP") { model?.extract() }.disabled(
                     model?.selectedItems.contains { $0.url.pathExtension.lowercased() == "zip" }
                         != true || model?.busy == true)
-                Button("Duplicate") { model?.duplicate() }.keyboardShortcut("d").disabled(
+                Button("Duplicate") { model?.duplicate() }.configurableShortcut(.duplicate).disabled(
                     model?.selection.isEmpty != false || model?.busy == true)
                 Button("Move to Trash") {
                     textOrFile("deleteToBeginningOfLine:") { model?.trash() }
-                }.keyboardShortcut(.delete)
-                Button("Get Info") { model?.info() }.keyboardShortcut("i").disabled(
+                }.configurableShortcut(.trash)
+                Button("Get Info") { model?.info() }.configurableShortcut(.info).disabled(
                     model?.selection.isEmpty != false)
-                Button("Quick Look") { model?.preview = model?.selected }.keyboardShortcut("y")
+                Button("Quick Look") { model?.preview = model?.selected }.configurableShortcut(.quickLook)
                     .disabled(model?.selection.isEmpty != false)
             }
             CommandMenu("Go") {
-                Button("Back") { model?.goBack() }.keyboardShortcut("[").disabled(
+                Button("Back") { model?.goBack() }.configurableShortcut(.back).disabled(
                     model?.backStack.isEmpty != false)
-                Button("Forward") { model?.goForward() }.keyboardShortcut("]").disabled(
+                Button("Forward") { model?.goForward() }.configurableShortcut(.forward).disabled(
                     model?.forwardStack.isEmpty != false)
                 Button("Enclosing Folder") {
                     if let model { model.navigate(model.location.deletingLastPathComponent()) }
-                }.keyboardShortcut(.upArrow)
+                }.configurableShortcut(.enclosingFolder)
                 Button("Edit Location") {
                     if let model {
                         NotificationCenter.default.post(name: .editBrowserLocation, object: model.id)
                     }
-                }.keyboardShortcut("l").disabled(model?.busy != false)
-                Button("Go to Folder…") { model?.goToFolder() }.keyboardShortcut(
-                    "g", modifiers: [.command, .shift])
+                }.configurableShortcut(.editLocation).disabled(model?.busy != false)
+                Button("Go to Folder…") { model?.goToFolder() }.configurableShortcut(.goToFolder)
                 Divider()
                 ForEach(GoDestination.allCases) { destination in
                     Button(destination.title) { model?.sidebar(destination.route) }
@@ -104,19 +102,15 @@ import UniformTypeIdentifiers
                 ForEach(FileViewMode.allCases.indices, id: \.self) { index in
                     Button("As \(FileViewMode.allCases[index].title)") {
                         model?.viewMode = FileViewMode.allCases[index]
-                    }.keyboardShortcut(KeyEquivalent(Character(String(index + 1))))
+                    }.configurableShortcut(BrowserShortcutAction.viewAction(for: FileViewMode.allCases[index]))
                 }
-                Button("Show Hidden Files") { model?.showHidden.toggle() }.keyboardShortcut(
-                    ".", modifiers: [.command, .shift])
-                Button("Refresh") { model?.schedule() }.keyboardShortcut("r")
+                Button("Show Hidden Files") { model?.showHidden.toggle() }.configurableShortcut(.showHidden)
+                Button("Refresh") { model?.schedule() }.configurableShortcut(.refresh)
                 Button("Search") {
                     NotificationCenter.default.post(name: .focusSearch, object: nil)
-                }.keyboardShortcut("f")
+                }.configurableShortcut(.search).disabled(presentation?.isSettingsPresented == true)
             }
         }
-        Settings { SettingsView() }
-            .windowStyle(.hiddenTitleBar)
-            .windowResizability(.contentSize)
     }
     private func textOrFile(_ selector: String, action: () -> Void) {
         if NSApp.keyWindow?.firstResponder is NSTextView {
@@ -129,15 +123,42 @@ import UniformTypeIdentifiers
 extension Notification.Name { static let focusSearch = Notification.Name("focusSearch") }
 struct BrowserRoot: View {
     @StateObject private var workspace = BrowserWorkspace(sessionDefaults: .standard)
+    @StateObject private var presentation = BrowserPresentation()
     var body: some View {
-        BrowserView(workspace: workspace, model: workspace.current)
-            .focusedSceneObject(workspace).focusedSceneObject(workspace.current)
+        ZStack {
+            BrowserView(workspace: workspace, model: workspace.current, presentation: presentation)
+                .disabled(presentation.isSettingsPresented)
+                .allowsHitTesting(!presentation.isSettingsPresented)
+                .accessibilityHidden(presentation.isSettingsPresented)
+            if presentation.isSettingsPresented {
+                Color.black.opacity(0.36).ignoresSafeArea()
+                    .contentShape(Rectangle()).onTapGesture {}
+                SettingsView {
+                    NSApp.keyWindow?.makeFirstResponder(nil)
+                    presentation.isSettingsPresented = false
+                }
+                .frame(maxWidth: 1060, maxHeight: 760)
+                .background(SettingsStyle.surface, in: RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(SettingsStyle.border) }
+                .shadow(color: .black.opacity(0.18), radius: 24, y: 10)
+                .padding(24)
+            }
+        }
+        .focusedSceneObject(presentation)
+        .focusedSceneObject(presentation.isSettingsPresented ? nil : workspace)
+        .focusedSceneObject(presentation.isSettingsPresented ? nil : workspace.current)
     }
+}
+
+@MainActor final class BrowserPresentation: ObservableObject {
+    @Published var isSettingsPresented = false
 }
 
 struct BrowserView: View {
     @ObservedObject var workspace: BrowserWorkspace
     @ObservedObject var model: SearchModel
+    @ObservedObject var presentation: BrowserPresentation
     private enum KeyboardFocus: Hashable { case files, search }
     @FocusState private var keyboardFocus: KeyboardFocus?
     private var searchFocused: Bool { keyboardFocus == .search }
@@ -281,7 +302,7 @@ struct BrowserView: View {
         .background(BrowserWindowCapture { browserWindow = $0 }.frame(width: 0, height: 0))
         .background(
             MouseNavigationTarget { command in
-                guard !model.busy, model.preview == nil else { return false }
+                guard !presentation.isSettingsPresented, !model.busy, model.preview == nil else { return false }
                 if command == .back { model.goBack() } else { model.goForward() }
                 return true
             }.frame(width: 0, height: 0)
@@ -298,7 +319,13 @@ struct BrowserView: View {
             if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }; keyMonitor = nil
         }
         .onReceive(NotificationCenter.default.publisher(for: .focusSearch)) { _ in
+            guard !presentation.isSettingsPresented else { return }
             fileNavigationActive = false; model.sort = .relevance; keyboardFocus = .search
+        }
+        .onChange(of: presentation.isSettingsPresented) { _, presented in
+            keyboardFocus = nil
+            fileNavigationActive = !presented
+            if presented { browserWindow?.makeFirstResponder(nil) }
         }
         .onReceive(
             NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didMountNotification)
@@ -341,11 +368,13 @@ struct BrowserView: View {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             guard let browserWindow, NSApp.keyWindow === browserWindow else { return event }
+            guard !presentation.isSettingsPresented else { return event }
             if let command = TabShortcut.command(for: event), !browserWindow.isSheet {
                 if command == .new { workspace.newTab() } else { workspace.reopenClosedTab() }
                 return nil
             }
-            if searchFocused && event.keyCode == 125 && !model.sortedHits.isEmpty {
+            if searchFocused && event.keyCode == 125 && BrowserShortcut.flags(for: event).isEmpty
+                && !model.sortedHits.isEmpty {
                 focusFiles(); model.select(model.sortedHits[0], extending: false, toggling: false)
                 model.selectionNavigation.send((model.sortedHits[0].path, false)); return nil
             }
@@ -353,12 +382,18 @@ struct BrowserView: View {
                 fileNavigationActive && !searchFocused,
                 !(NSApp.keyWindow?.firstResponder is NSTextView)
             else { return event }
-            if let action = BrowserShortcutAction.navigationAction(for: event) {
-                if action == .open { model.open() } else { model.renameItems() }
+            if let action = BrowserShortcutAction.navigationAction(for: event),
+                !model.busy, !model.selection.isEmpty
+            {
+                switch action {
+                case .open: model.open()
+                case .rename: model.renameItems()
+                case .quickLook: model.preview = model.selected
+                default: break
+                }
                 return nil
             }
             if event.modifierFlags.intersection([.command, .control, .option]).isEmpty {
-                if event.keyCode == 49 { model.preview = model.selected; return nil }
                 if event.keyCode == 53 { model.selection = []; return nil }
                 if (model.viewMode == .icons || model.viewMode == .gallery
                     || (model.viewMode == .columns && [125, 126].contains(event.keyCode))),
@@ -373,9 +408,6 @@ struct BrowserView: View {
                         by: delta, extending: event.modifierFlags.contains(.shift))
                     return nil
                 }
-            }
-            if event.modifierFlags.contains(.command), event.keyCode == 125 {
-                model.open(); return nil
             }
             return event
         }

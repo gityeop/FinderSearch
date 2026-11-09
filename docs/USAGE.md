@@ -12,10 +12,9 @@ It is an early prototype, with incomplete Finder parity and no OS-shell replacem
 - macOS 15 or newer.
 - An Apple Silicon Mac for the downloadable release.
 
-Download the `.dmg` from [GitHub Releases](https://github.com/zeusinsight/FinderSearch/releases/latest),
-drag FinderSearch into Applications, eject the image, and open the app. If macOS
-blocks it, use **System Settings → Privacy & Security → Open Anyway** for FinderSearch.
-The release is ad-hoc signed, not Developer ID-signed or notarized by Apple.
+Download the `.dmg` from [GitHub Releases](https://github.com/gityeop/FinderSearch/releases/latest),
+drag FinderSearch into Applications, eject the image, and open the app.
+Published DMG and ZIP releases are Developer ID-signed and notarized by Apple.
 
 Building from source additionally requires:
 
@@ -101,12 +100,17 @@ not intentionally download cloud file contents.
 
 ## Usage
 
-- **Settings:** Command-comma opens a sidebar-based settings window.
+- **Settings:** Command-comma opens settings inside the browser with a dimmed backdrop.
+  Close settings with its X button or Escape.
   In **General → Open new windows to**, choose Last session, Home, Desktop, Documents,
   Downloads, Applications, or Choose folder. A chosen folder opens in a single tab
   on launch and in new windows; existing windows and explicitly opened tabs stay in place.
   Last session restores the previous tabs, selections, and scroll positions.
-  Keyboard shortcuts are grouped under **Keyboard shortcuts**.
+  **Keyboard shortcuts** contains 25 editable bindings for file actions, navigation,
+  views, windows, and tabs. Changes update the menu immediately. A key already in
+  use is rejected. Standard text-editing shortcuts retain their normal behavior.
+  Open's Command-O/Command-Down and Quick Look's Space alternate apply while those
+  actions use their default shortcuts; customizing the action releases its alternates.
 - **View defaults:** **Settings → Appearance** sets the default view, sort field, and
   direction. With **Remember folder views** enabled, changing the view or sort in a
   folder saves that folder's choices. Turn it off to use global defaults, or choose

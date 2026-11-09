@@ -136,7 +136,7 @@ final class MarqueeSelectionTests: XCTestCase {
             contentRect: NSRect(x: 0, y: 0, width: 1050, height: 680), styleMask: [.titled],
             backing: .buffered, defer: false)
         window.contentView = NSHostingView(
-            rootView: BrowserView(workspace: workspace, model: model))
+            rootView: BrowserView(workspace: workspace, model: model, presentation: BrowserPresentation()))
         window.makeKeyAndOrderFront(nil)
         defer { window.orderOut(nil) }
         RunLoop.main.run(until: Date().addingTimeInterval(0.5))

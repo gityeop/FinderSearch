@@ -1,6 +1,10 @@
 import SwiftUI
 
 enum SettingsStyle {
+    static let bodyFontSize: CGFloat = 16
+    static let bodyFont = Font.system(size: bodyFontSize, weight: .regular)
+    static let sectionFont = Font.system(size: 18, weight: .semibold)
+    static let titleFont = Font.system(size: 20, weight: .semibold)
     static let surface = Color(nsColor: .textBackgroundColor)
     static let border = Color.primary.opacity(0.10)
     static let hover = Color.primary.opacity(0.045)
@@ -32,7 +36,7 @@ struct SettingsPicker<Value: Hashable>: View {
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
+                    .font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
         }
@@ -52,10 +56,10 @@ struct SettingsPicker<Value: Hashable>: View {
                                     Text(choice.title).lineLimit(1).truncationMode(.middle)
                                     Spacer(minLength: 0)
                                     Image(systemName: "checkmark")
-                                        .font(.system(size: 11, weight: .semibold))
+                                        .font(.system(size: 13, weight: .semibold))
                                         .opacity(choice.value == selection ? 1 : 0)
                                 }
-                                .frame(maxWidth: .infinity, minHeight: 32)
+                                .frame(maxWidth: .infinity, minHeight: 40)
                                 .padding(.horizontal, 10)
                             }
                             .buttonStyle(SettingsOptionStyle())
@@ -63,7 +67,7 @@ struct SettingsPicker<Value: Hashable>: View {
                         }
                     }.padding(6)
                 }
-                .frame(height: min(CGFloat(choices.count * 34 + 12), 284))
+                .frame(height: min(CGFloat(choices.count * 42 + 12), 320))
                 if let actionTitle, let action {
                     Divider().padding(.horizontal, 6)
                     Button {
@@ -71,15 +75,15 @@ struct SettingsPicker<Value: Hashable>: View {
                         action()
                     } label: {
                         Text(actionTitle).frame(
-                            maxWidth: .infinity, minHeight: 32, alignment: .leading
+                            maxWidth: .infinity, minHeight: 40, alignment: .leading
                         )
                         .padding(.horizontal, 10)
                     }
                     .buttonStyle(SettingsOptionStyle()).padding(6)
                 }
             }
-            .font(.system(size: 13))
-            .frame(width: 260)
+            .font(SettingsStyle.bodyFont)
+            .frame(width: 296)
             .background(SettingsStyle.surface)
         }
     }
@@ -90,9 +94,9 @@ struct SettingsButtonStyle: ButtonStyle {
     @State private var hovering = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 13))
+            .font(SettingsStyle.bodyFont)
             .foregroundStyle(Color.primary.opacity(enabled ? 1 : 0.35))
-            .padding(.horizontal, 12).frame(minHeight: 34)
+            .padding(.horizontal, 12).frame(minHeight: 40)
             .background(
                 configuration.isPressed || hovering ? SettingsStyle.hover : SettingsStyle.surface,
                 in: RoundedRectangle(cornerRadius: 8)
@@ -121,9 +125,9 @@ struct SettingsIconButtonStyle: ButtonStyle {
     @State private var hovering = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 14))
+            .font(SettingsStyle.bodyFont)
             .foregroundStyle(.secondary)
-            .frame(width: 30, height: 30)
+            .frame(width: 34, height: 34)
             .background(
                 hovering || configuration.isPressed ? SettingsStyle.hover : .clear,
                 in: RoundedRectangle(cornerRadius: 7)
@@ -136,8 +140,8 @@ struct SettingsIconButtonStyle: ButtonStyle {
 struct SettingsTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration.textFieldStyle(.plain)
-            .font(.system(size: 13))
-            .padding(.horizontal, 12).frame(height: 34)
+            .font(SettingsStyle.bodyFont)
+            .padding(.horizontal, 12).frame(height: 40)
             .background(SettingsStyle.surface, in: RoundedRectangle(cornerRadius: 8))
             .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(SettingsStyle.border) }
     }

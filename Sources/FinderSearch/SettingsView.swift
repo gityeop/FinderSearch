@@ -21,7 +21,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
             return
                 "view icons list columns gallery sort order name modified size kind remember folder reset"
         case .search: return "scope this mac current folder last used excluded rules pattern"
-        case .shortcuts: return "keyboard open rename copy path enter f2"
+        case .shortcuts: return "keyboard shortcuts open rename copy path enter f2 window tab folder duplicate trash info preview back forward location search refresh hidden icons list columns gallery"
         }
     }
     func matches(_ text: String) -> Bool {
@@ -30,6 +30,8 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
 }
 
 struct SettingsView: View {
+    let close: () -> Void
+    @FocusState private var searchFocused: Bool
     @State private var section = SettingsSection.general
     @State private var search = ""
     private var sections: [SettingsSection] {
@@ -37,65 +39,59 @@ struct SettingsView: View {
     }
     var body: some View {
         VStack(spacing: 0) {
-            ZStack {
-                Color.clear.contentShape(Rectangle()).gesture(WindowDragGesture())
-                HStack {
-                    Text("Settings").font(.system(size: 16, weight: .semibold))
-                        .allowsHitTesting(false)
-                    Spacer()
-                    Button {
-                        NSApp.keyWindow?.performClose(nil)
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
+            HStack {
+                Text("Settings").font(SettingsStyle.titleFont)
+                Spacer()
+                Button(action: close) { Image(systemName: "xmark") }
                     .buttonStyle(SettingsIconButtonStyle()).accessibilityLabel("Close settings")
-                }.padding(.horizontal, 20)
-            }.frame(height: 56)
+            }.padding(.horizontal, 20).frame(height: 60)
             Divider()
             HStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 9) {
-                        Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                        TextField("Search", text: $search).textFieldStyle(.plain)
-                            .accessibilityLabel("Search settings")
-                    }
-                    .font(.system(size: 13)).padding(.horizontal, 11).frame(height: 36)
-                    .background(SettingsStyle.surface, in: RoundedRectangle(cornerRadius: 8))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 8).strokeBorder(SettingsStyle.border)
-                    }
-                    .padding(.bottom, 18)
-                    ForEach(sections) { item in
-                        Button {
-                            section = item
-                        } label: {
-                            HStack(spacing: 11) {
-                                Image(systemName: item.symbol).font(.system(size: 17))
-                                    .frame(width: 20)
-                                Text(item.rawValue).font(.system(size: 13))
-                                Spacer(minLength: 0)
-                            }
-                            .padding(.horizontal, 11).frame(height: 40)
-                            .background(
-                                section == item ? SettingsStyle.selection : .clear,
-                                in: RoundedRectangle(cornerRadius: 8)
-                            )
-                            .contentShape(Rectangle())
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 9) {
+                            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                            TextField("Search", text: $search).textFieldStyle(.plain)
+                                .accessibilityLabel("Search settings")
+                                .focused($searchFocused)
                         }
-                        .buttonStyle(SettingsOptionStyle())
-                        .accessibilityAddTraits(section == item ? .isSelected : [])
+                        .font(SettingsStyle.bodyFont).padding(.horizontal, 11).frame(height: 40)
+                        .background(SettingsStyle.surface, in: RoundedRectangle(cornerRadius: 8))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8).strokeBorder(SettingsStyle.border)
+                        }
+                        .padding(.bottom, 18)
+                        ForEach(sections) { item in
+                            Button {
+                                section = item
+                            } label: {
+                                HStack(spacing: 11) {
+                                    Image(systemName: item.symbol).font(.system(size: 20))
+                                        .frame(width: 24)
+                                    Text(item.rawValue).font(SettingsStyle.bodyFont).lineLimit(1)
+                                    Spacer(minLength: 0)
+                                }
+                                .padding(.horizontal, 11).frame(height: 44)
+                                .background(
+                                    section == item ? SettingsStyle.selection : .clear,
+                                    in: RoundedRectangle(cornerRadius: 8)
+                                )
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(SettingsOptionStyle())
+                            .accessibilityAddTraits(section == item ? .isSelected : [])
+                        }
                     }
-                    Spacer()
+                    .padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 16)
                 }
-                .padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 16)
-                .frame(width: 224)
+                .frame(width: 248)
                 Divider()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 22) {
                         if sections.isEmpty {
                             Text("No settings found").foregroundStyle(.secondary)
                         } else {
-                            Text(section.rawValue).font(.system(size: 16, weight: .semibold))
+                            Text(section.rawValue).font(SettingsStyle.sectionFont)
                             switch section {
                             case .general: StartupFolderSettingsView()
                             case .appearance: AppearanceSettingsView()
@@ -104,16 +100,16 @@ struct SettingsView: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 28).padding(.vertical, 26)
+                    .padding(24)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
-        .frame(width: 920, height: 600)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .font(SettingsStyle.bodyFont)
         .background(SettingsStyle.surface)
-        .background(SettingsWindowControls())
-        .ignoresSafeArea()
-        .navigationTitle("Settings")
+        .onExitCommand(perform: close)
+        .task { searchFocused = true }
         .onChange(of: search) { _, _ in
             if !sections.contains(section), let first = sections.first { section = first }
         }
@@ -125,10 +121,10 @@ struct PreferenceRow<Control: View>: View {
     @ViewBuilder var control: () -> Control
     var body: some View {
         HStack(spacing: 16) {
-            Text(title).font(.system(size: 13))
+            Text(title).font(SettingsStyle.bodyFont)
             Spacer(minLength: 8)
             control().frame(width: 232, alignment: .trailing)
-        }.frame(minHeight: 68)
+        }.frame(minHeight: 72)
     }
 }
 
@@ -161,19 +157,5 @@ private struct StartupFolderSettingsView: View {
         panel.allowsMultipleSelection = false; panel.treatsFilePackagesAsDirectories = false
         if !path.isEmpty { panel.directoryURL = URL(fileURLWithPath: path, isDirectory: true) }
         if panel.runModal() == .OK, let folder = panel.url { path = folder.path }
-    }
-}
-
-private struct SettingsWindowControls: NSViewRepresentable {
-    func makeNSView(context: Context) -> WindowView { WindowView() }
-    func updateNSView(_ nsView: WindowView, context: Context) {}
-
-    final class WindowView: NSView {
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-                window?.standardWindowButton(button)?.isHidden = true
-            }
-        }
     }
 }
