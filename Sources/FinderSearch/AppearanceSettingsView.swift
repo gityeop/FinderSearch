@@ -8,35 +8,38 @@ struct AppearanceSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             PreferenceRow(title: "Default view") {
-                Picker("Default view", selection: $view) {
-                    ForEach(FileViewMode.allCases, id: \.rawValue) { mode in
-                        Text(mode.title).tag(mode.rawValue)
-                    }
-                }.labelsHidden()
+                SettingsPicker(
+                    title: "Default view", selection: $view,
+                    choices: FileViewMode.allCases.map {
+                        SettingsChoice(value: $0.rawValue, title: $0.title)
+                    })
             }
             Divider()
             PreferenceRow(title: "Sort by") {
-                Picker("Sort by", selection: $sort) {
-                    ForEach([FileSort.name, .modified, .size, .kind], id: \.rawValue) { value in
-                        Text(value.rawValue).tag(value.rawValue)
-                    }
-                }.labelsHidden()
+                SettingsPicker(
+                    title: "Sort by", selection: $sort,
+                    choices: [FileSort.name, .modified, .size, .kind].map {
+                        SettingsChoice(value: $0.rawValue, title: $0.rawValue)
+                    })
             }
             Divider()
             PreferenceRow(title: "Order") {
-                Picker("Order", selection: $ascending) {
-                    Text("Ascending").tag(true); Text("Descending").tag(false)
-                }.labelsHidden()
+                SettingsPicker(
+                    title: "Order", selection: $ascending,
+                    choices: [
+                        SettingsChoice(value: true, title: "Ascending"),
+                        SettingsChoice(value: false, title: "Descending"),
+                    ])
             }
             Divider()
             PreferenceRow(title: "Remember folder views") {
-                Toggle("Remember folder views", isOn: $remember).labelsHidden().toggleStyle(.switch)
-                    .controlSize(.small)
+                Toggle("Remember folder views", isOn: $remember).labelsHidden()
+                    .toggleStyle(SettingsSwitchStyle())
             }
             Divider()
             Button("Reset folder views") {
                 UserDefaults.standard.removeObject(forKey: BrowserPreferences.folderViewsKey)
-            }.padding(.top, 24)
+            }.buttonStyle(SettingsButtonStyle()).padding(.top, 24)
         }
     }
 }

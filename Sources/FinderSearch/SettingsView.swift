@@ -37,55 +37,65 @@ struct SettingsView: View {
     }
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("Settings").font(.system(size: 15, weight: .semibold))
-                Spacer()
-                Button {
-                    NSApp.keyWindow?.performClose(nil)
-                } label: {
-                    Image(systemName: "xmark").font(.system(size: 13)).padding(4)
-                }
-                .buttonStyle(.plain).accessibilityLabel("Close settings")
-            }.padding(.horizontal, 20).padding(.vertical, 14)
+            ZStack {
+                Color.clear.contentShape(Rectangle()).gesture(WindowDragGesture())
+                HStack {
+                    Text("Settings").font(.system(size: 16, weight: .semibold))
+                        .allowsHitTesting(false)
+                    Spacer()
+                    Button {
+                        NSApp.keyWindow?.performClose(nil)
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .buttonStyle(SettingsIconButtonStyle()).accessibilityLabel("Close settings")
+                }.padding(.horizontal, 20)
+            }.frame(height: 56)
             Divider()
             HStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 7) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 9) {
                         Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                         TextField("Search", text: $search).textFieldStyle(.plain)
+                            .accessibilityLabel("Search settings")
                     }
-                    .font(.system(size: 13)).padding(8)
+                    .font(.system(size: 13)).padding(.horizontal, 11).frame(height: 36)
+                    .background(SettingsStyle.surface, in: RoundedRectangle(cornerRadius: 8))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 7).strokeBorder(Color.primary.opacity(0.1))
+                        RoundedRectangle(cornerRadius: 8).strokeBorder(SettingsStyle.border)
                     }
-                    .padding(.bottom, 16)
+                    .padding(.bottom, 18)
                     ForEach(sections) { item in
                         Button {
                             section = item
                         } label: {
-                            Label(item.rawValue, systemImage: item.symbol)
-                                .font(.system(size: 13))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 10).padding(.vertical, 10)
-                                .background(
-                                    section == item ? Color.primary.opacity(0.08) : .clear,
-                                    in: RoundedRectangle(cornerRadius: 8)
-                                )
-                                .contentShape(Rectangle())
+                            HStack(spacing: 11) {
+                                Image(systemName: item.symbol).font(.system(size: 17))
+                                    .frame(width: 20)
+                                Text(item.rawValue).font(.system(size: 13))
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, 11).frame(height: 40)
+                            .background(
+                                section == item ? SettingsStyle.selection : .clear,
+                                in: RoundedRectangle(cornerRadius: 8)
+                            )
+                            .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(SettingsOptionStyle())
                         .accessibilityAddTraits(section == item ? .isSelected : [])
                     }
                     Spacer()
                 }
-                .padding(16).frame(width: 206)
+                .padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 16)
+                .frame(width: 224)
                 Divider()
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 22) {
                         if sections.isEmpty {
-                            ContentUnavailableView.search(text: search)
+                            Text("No settings found").foregroundStyle(.secondary)
                         } else {
-                            Text(section.rawValue).font(.system(size: 18, weight: .semibold))
+                            Text(section.rawValue).font(.system(size: 16, weight: .semibold))
                             switch section {
                             case .general: StartupFolderSettingsView()
                             case .appearance: AppearanceSettingsView()
@@ -94,11 +104,16 @@ struct SettingsView: View {
                             }
                         }
                     }
-                    .padding(24).frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 28).padding(.vertical, 26)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
-        .frame(width: 880, height: 580).navigationTitle("Settings")
+        .frame(width: 920, height: 600)
+        .background(SettingsStyle.surface)
+        .background(SettingsWindowControls())
+        .ignoresSafeArea()
+        .navigationTitle("Settings")
         .onChange(of: search) { _, _ in
             if !sections.contains(section), let first = sections.first { section = first }
         }
@@ -112,32 +127,29 @@ struct PreferenceRow<Control: View>: View {
         HStack(spacing: 16) {
             Text(title).font(.system(size: 13))
             Spacer(minLength: 8)
-            control().frame(width: 210, alignment: .trailing)
-        }.padding(.vertical, 12)
+            control().frame(width: 232, alignment: .trailing)
+        }.frame(minHeight: 68)
     }
 }
 
 private struct StartupFolderSettingsView: View {
     @AppStorage(StartupFolderPreferences.key) private var path = ""
-    private let chooseFolderTag = "choose-folder"
     private var options: [StartupFolderOption] { StartupFolderPreferences.options }
+    private var choices: [SettingsChoice<String>] {
+        var result = options.map { SettingsChoice(value: $0.path, title: $0.title) }
+        if !options.contains(where: { $0.path == path }) {
+            result.append(
+                SettingsChoice(
+                    value: path, title: NSString(string: path).abbreviatingWithTildeInPath))
+        }
+        return result
+    }
     var body: some View {
         VStack(spacing: 0) {
             PreferenceRow(title: "Open new windows to") {
-                Picker(
-                    "Open new windows to",
-                    selection: Binding(
-                        get: { path },
-                        set: { value in
-                            if value == chooseFolderTag { chooseFolder() } else { path = value }
-                        }
-                    )
-                ) {
-                    ForEach(options) { option in Text(option.title).tag(option.path) }
-                    if !options.contains(where: { $0.path == path }) { Text(path).tag(path) }
-                    Divider()
-                    Text("Choose folder…").tag(chooseFolderTag)
-                }.labelsHidden().pickerStyle(.menu)
+                SettingsPicker(
+                    title: "Open new windows to", selection: $path, choices: choices,
+                    actionTitle: "Choose folder…", action: chooseFolder)
             }
             Divider()
         }
@@ -149,5 +161,19 @@ private struct StartupFolderSettingsView: View {
         panel.allowsMultipleSelection = false; panel.treatsFilePackagesAsDirectories = false
         if !path.isEmpty { panel.directoryURL = URL(fileURLWithPath: path, isDirectory: true) }
         if panel.runModal() == .OK, let folder = panel.url { path = folder.path }
+    }
+}
+
+private struct SettingsWindowControls: NSViewRepresentable {
+    func makeNSView(context: Context) -> WindowView { WindowView() }
+    func updateNSView(_ nsView: WindowView, context: Context) {}
+
+    final class WindowView: NSView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+                window?.standardWindowButton(button)?.isHidden = true
+            }
+        }
     }
 }

@@ -56,8 +56,9 @@ struct BrowserShortcut {
         event.modifierFlags.intersection([.command, .option, .control, .shift])
     }
     static func allowsUnmodified(_ key: String) -> Bool {
-        key == "\r" || key.unicodeScalars.count == 1
-            && (0xf704...0xf726).contains(key.unicodeScalars.first!.value)
+        key == "\r"
+            || key.unicodeScalars.count == 1
+                && (0xf704...0xf726).contains(key.unicodeScalars.first!.value)
     }
     func matches(_ event: NSEvent) -> Bool {
         Self.key(for: event) == key && Int(Self.flags(for: event).rawValue) == modifiers
@@ -83,7 +84,7 @@ struct ShortcutSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(BrowserShortcutAction.allCases) { action in
-                ShortcutSettingRow(action: action).padding(.vertical, 14)
+                ShortcutSettingRow(action: action)
                 Divider()
             }
             Button("Restore Defaults") {
@@ -91,7 +92,7 @@ struct ShortcutSettingsView: View {
                     UserDefaults.standard.removeObject(forKey: action.keyPreference)
                     UserDefaults.standard.removeObject(forKey: action.modifiersPreference)
                 }
-            }.padding(.top, 24)
+            }.buttonStyle(SettingsButtonStyle()).padding(.top, 24)
         }
     }
 }
@@ -107,11 +108,11 @@ private struct ShortcutSettingRow: View {
         _modifiers = AppStorage(wrappedValue: action.defaultModifiers, action.modifiersPreference)
     }
     var body: some View {
-        HStack(spacing: 16) {
-            Text(action.title).font(.system(size: 13))
-            Spacer()
+        PreferenceRow(title: action.title) {
             ShortcutRecorder(label: action.title, key: $key, modifiers: $modifiers)
-                .frame(width: 155, height: 28)
+                .frame(width: 172, height: 34)
+                .background(SettingsStyle.surface, in: RoundedRectangle(cornerRadius: 8))
+                .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(SettingsStyle.border) }
         }
     }
 }
@@ -123,7 +124,9 @@ private struct ShortcutRecorder: NSViewRepresentable {
 
     func makeNSView(context: Context) -> ShortcutRecorderButton {
         let button = ShortcutRecorderButton()
-        button.bezelStyle = .rounded
+        button.isBordered = false
+        button.font = .monospacedSystemFont(ofSize: 13, weight: .medium)
+        button.focusRingType = .exterior
         button.target = button
         button.action = #selector(ShortcutRecorderButton.beginRecording)
         button.setAccessibilityLabel("\(label) shortcut")

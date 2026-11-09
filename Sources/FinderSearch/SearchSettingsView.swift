@@ -9,15 +9,15 @@ struct SearchSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             PreferenceRow(title: "Default scope") {
-                Picker("Default scope", selection: $scope) {
-                    ForEach(DefaultSearchScope.allCases) { scope in
-                        Text(scope.title).tag(scope.rawValue)
-                    }
-                }.labelsHidden()
+                SettingsPicker(
+                    title: "Default scope", selection: $scope,
+                    choices: DefaultSearchScope.allCases.map {
+                        SettingsChoice(value: $0.rawValue, title: $0.title)
+                    })
             }
             Divider()
-            Text("Excluded folders and patterns").font(.system(size: 13, weight: .medium)).padding(
-                .top, 28)
+            Text("Excluded folders and patterns").font(.system(size: 13, weight: .medium))
+                .padding(.top, 30)
             VStack(spacing: 0) {
                 ForEach(rules, id: \.self) { rule in
                     HStack {
@@ -27,19 +27,22 @@ struct SearchSettingsView: View {
                         Button {
                             rules.removeAll { $0 == rule }; save()
                         } label: {
-                            Image(systemName: "minus.circle")
-                        }.buttonStyle(.plain).accessibilityLabel("Remove \(rule)")
-                    }.padding(.vertical, 10)
+                            Image(systemName: "xmark").font(.system(size: 11))
+                        }.buttonStyle(SettingsIconButtonStyle()).accessibilityLabel(
+                            "Remove \(rule)")
+                    }.frame(minHeight: 48)
                     Divider()
                 }
             }.padding(.top, 8)
             HStack(spacing: 10) {
                 TextField("node_modules/ or *.log", text: $pattern)
-                    .textFieldStyle(.roundedBorder).onSubmit(addPattern).accessibilityLabel(
+                    .textFieldStyle(SettingsTextFieldStyle()).onSubmit(addPattern)
+                    .accessibilityLabel(
                         "Excluded pattern")
-                Button("Add", action: addPattern).disabled(
+                Button("Add", action: addPattern).buttonStyle(SettingsButtonStyle()).disabled(
                     pattern.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Button(action: chooseFolders) { Image(systemName: "folder.badge.plus") }
+                    .buttonStyle(SettingsButtonStyle())
                     .help("Add folders").accessibilityLabel("Add excluded folders")
             }.padding(.top, 16)
         }

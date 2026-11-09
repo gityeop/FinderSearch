@@ -114,7 +114,9 @@ import UniformTypeIdentifiers
                 }.keyboardShortcut("f")
             }
         }
-        Settings { SettingsView() }.windowResizability(.contentSize)
+        Settings { SettingsView() }
+            .windowStyle(.hiddenTitleBar)
+            .windowResizability(.contentSize)
     }
     private func textOrFile(_ selector: String, action: () -> Void) {
         if NSApp.keyWindow?.firstResponder is NSTextView {
