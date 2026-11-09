@@ -107,8 +107,20 @@ not intentionally download cloud file contents.
   on launch and in new windows; existing windows and explicitly opened tabs stay in place.
   Last session restores the previous tabs, selections, and scroll positions.
   Keyboard shortcuts are grouped under **Keyboard shortcuts**.
+- **View defaults:** **Settings → Appearance** sets the default view, sort field, and
+  direction. With **Remember folder views** enabled, changing the view or sort in a
+  folder saves that folder's choices. Turn it off to use global defaults, or choose
+  **Reset folder views** to clear the saved choices.
+- **Search settings:** **Settings → Search** selects This Mac, Current folder, or
+  Last used as the default search scope. Add excluded folder names, absolute folder
+  paths, or wildcard patterns using `*` and `?` (for example, `node_modules/`, `.git`,
+  `*.log`, or `**/build/**`). Exclusions filter search results before the result limit;
+  they do not hide folders during normal browsing or remove files from the index.
+- **Address bar:** click the path or press Command-L, type a folder path, and press
+  Enter. Absolute paths, relative paths, `~`, and file URLs are accepted. Escape cancels.
+  The folder menu opens parent folders.
 - **Browse:** icons, sortable list, columns, and gallery via Command-1 through Command-4.
-  Back/forward/up navigation, a path bar, favorites, mounted volumes, and iCloud's local folder.
+  Back/forward/up navigation, an editable address bar, favorites, mounted volumes, and iCloud's local folder.
   Eject buttons beside external/removable volumes and disk images safely unmount them.
   Right-click empty space for New Folder, New Text File, Paste, view options, and Refresh; right-click
   files for their actions in every view, including columns and gallery.

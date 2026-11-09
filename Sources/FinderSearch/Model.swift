@@ -29,14 +29,24 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
         willSet { if !changingLocation && !isSearch { saveDefaultSnapshot() } }
         didSet {
             invalidateDerived()
-            if !changingLocation && !isSearch,
-                let snapshot = snapshots[SnapshotKey(route: route, hidden: showHidden)]
-            {
-                sort = snapshot.sort; ascending = snapshot.ascending
-            } else if !changingLocation && !isSearch
-                && !oldValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            {
-                hits = []; selection = []
+            if !changingLocation {
+                if isSearch {
+                    if oldValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        scope = currentPreferences.searchPath(for: location)
+                    }
+                    sort = .relevance
+                } else if !oldValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    if route == location.path {
+                        applyFolderViewOptions()
+                    } else if let snapshot = snapshots[SnapshotKey(route: route, hidden: showHidden)] {
+                        sort = snapshot.sort; ascending = snapshot.ascending
+                    } else if route == "recents" {
+                        sort = .modified; ascending = false
+                    }
+                    if snapshots[SnapshotKey(route: route, hidden: showHidden)] == nil {
+                        hits = []; selection = []
+                    }
+                }
             }
             schedule()
         }
@@ -94,14 +104,15 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
     var previewItems: [Hit] = []
     let springLoader = SpringLoader()
     @Published private(set) var renaming: Hit?
-    @Published var viewMode =
-        FileViewMode(rawValue: UserDefaults.standard.string(forKey: "viewMode") ?? "icons")
-        ?? .icons
-    {
-        didSet { UserDefaults.standard.set(viewMode.rawValue, forKey: "viewMode") }
+    @Published var viewMode: FileViewMode = .icons {
+        didSet { if viewMode != oldValue { saveFolderViewOptions() } }
     }
-    @Published var sort: FileSort = .name { didSet { invalidateDerived(preserveOrder: true) } }
-    @Published var ascending = true { didSet { invalidateDerived(preserveOrder: true) } }
+    @Published var sort: FileSort = .name {
+        didSet { invalidateDerived(preserveOrder: true); if sort != oldValue { saveFolderViewOptions() } }
+    }
+    @Published var ascending = true {
+        didSet { invalidateDerived(preserveOrder: true); if ascending != oldValue { saveFolderViewOptions() } }
+    }
     @Published var showHidden = false { didSet { invalidateDerived(); schedule() } }
     @Published var busy = false
     @Published var operationProgress: FileOperationProgress?
@@ -123,9 +134,14 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
     private let diskAccessCheck: @Sendable () -> Bool
     private let folderLoader: @Sendable (URL, Bool) async throws -> [Hit]
     private let folderPreviewLoader: @Sendable (URL, Bool) async throws -> [Hit]
+    let preferencesDefaults: UserDefaults?
+    private var currentPreferences: BrowserPreferences
+    private var preferencesObserver: AnyCancellable?
+    private var transientFolderViews: [String: FolderViewOptions] = [:]
     init(
         engine: any SearchService = Engine(),
         searchDebounce: Duration = .milliseconds(50),
+        preferences: UserDefaults? = nil,
         diskAccessCheck: @escaping @Sendable () -> Bool = { FullDiskAccess.isGranted() },
         folderLoader: @escaping @Sendable (URL, Bool) async throws -> [Hit] = {
             try await LocalFiles.load($0, hidden: $1)
@@ -139,6 +155,75 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
         self.diskAccessCheck = diskAccessCheck
         self.folderLoader = folderLoader
         self.folderPreviewLoader = folderPreviewLoader
+        self.preferencesDefaults = preferences
+        self.currentPreferences = BrowserPreferences(in: preferences)
+        viewMode = currentPreferences.defaultView
+        sort = currentPreferences.defaultSort
+        ascending = currentPreferences.defaultAscending
+        scope = currentPreferences.searchPath(for: location)
+        applyFolderViewOptions()
+        if let preferences {
+            preferencesObserver = NotificationCenter.default.publisher(
+                for: UserDefaults.didChangeNotification, object: preferences)
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in self?.reloadPreferences() }
+        }
+    }
+
+    func reloadPreferences() {
+        let updated = BrowserPreferences(in: preferencesDefaults)
+        guard updated != currentPreferences else {
+            if !isSearch && route == location.path { applyFolderViewOptions() }
+            return
+        }
+        let exclusionsChanged = updated.exclusions != currentPreferences.exclusions
+        let scopeChanged = updated.searchScope != currentPreferences.searchScope
+        currentPreferences = updated
+        if isSearch {
+            let newScope = updated.searchPath(for: location)
+            if scopeChanged && scope != newScope { scope = newScope }
+            else if exclusionsChanged { schedule() }
+        } else if route == location.path {
+            applyFolderViewOptions()
+        }
+    }
+
+    func setSearchScope(_ path: String) {
+        scope = path
+        preferencesDefaults?.set(path.isEmpty ? "mac" : "folder", forKey: BrowserPreferences.lastScopeKey)
+    }
+
+    private func applyFolderViewOptions() {
+        let wasChanging = changingLocation
+        changingLocation = true
+        defer { changingLocation = wasChanging }
+        do {
+            let options: FolderViewOptions
+            if preferencesDefaults == nil, currentPreferences.rememberFolders,
+               let remembered = transientFolderViews[location.path] {
+                options = remembered
+            } else {
+                options = try currentPreferences.folderOptions(for: location.path, in: preferencesDefaults)
+            }
+            if viewMode != options.view { viewMode = options.view }
+            if sort != options.sort { sort = options.sort }
+            if ascending != options.ascending { ascending = options.ascending }
+        } catch {
+            NSLog("FinderSearch folder settings error: %@", error.localizedDescription)
+            mutationError = "Could not read folder settings."
+            self.error = mutationError
+        }
+    }
+
+    private func saveFolderViewOptions() {
+        guard !changingLocation, !isSearch, route == location.path,
+            currentPreferences.rememberFolders else { return }
+        let options = FolderViewOptions(view: viewMode, sort: sort, ascending: ascending)
+        if let preferencesDefaults {
+            BrowserPreferences.save(options, for: location.path, in: preferencesDefaults)
+        } else {
+            transientFolderViews[location.path] = options
+        }
     }
     private var task: Task<Void, Never>?
     private var prefetchTask: Task<Void, Never>?
@@ -340,11 +425,9 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
         if history && url != location { backStack.append(location); forwardStack = [] }
         if url.standardizedFileURL != location { scrollAnchor = nil; scrollOffset = 0 }
         location = url.standardizedFileURL; route = location.path
-        extraHits = []; scope = ""; query = ""; fileType = ""; selection = []; sort = .name;
-        ascending = true
-        if let snapshot = snapshots[SnapshotKey(route: route, hidden: showHidden)] {
-            sort = snapshot.sort; ascending = snapshot.ascending
-        }
+        extraHits = []; scope = currentPreferences.searchPath(for: location)
+        query = ""; fileType = ""; selection = []
+        applyFolderViewOptions()
         changingLocation = false
         if snapshots[SnapshotKey(route: route, hidden: showHidden)] == nil { hits = [] }
         watch(); schedule()
@@ -398,6 +481,7 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
         let folder = location, hidden = showHidden, text = query, searchScope = scope,
             type = fileType
         let recent = route == "recents" && !isSearch
+        let exclusionGlobs = SearchExclusions.globs(for: currentPreferences.exclusions)
         loading = !searchingNow && !cached; searching = searchingNow
         searchDebouncing = searchingNow && !immediate
         task = Task {
@@ -422,6 +506,7 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
                     } else if !type.isEmpty {
                         fields["type"] = type
                     }
+                    if searchingNow && !exclusionGlobs.isEmpty { fields["glob"] = exclusionGlobs }
                     let reply = try await engine.request(fields)
                     guard reply.ok else {
                         throw Engine.Failure.message(reply.error ?? "Search failed")
@@ -433,7 +518,7 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
                         await Task.yield()
                         let preview = try await folderPreviewLoader(folder, hidden)
                         let prepared = try await FileOrdering.prepareCached(
-                            preview, sort: .name, ascending: true, showHidden: hidden,
+                            preview, sort: sort, ascending: ascending, showHidden: hidden,
                             isSearch: false)
                         guard revision == generation, !Task.isCancelled else { return }
                         publish(preview, prepared: prepared)
@@ -846,7 +931,7 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
 }
 
 @MainActor final class BrowserWorkspace: ObservableObject {
-    @Published var tabs: [SearchModel] = [SearchModel()] {
+    @Published var tabs: [SearchModel] {
         didSet { observeSession(); saveSession() }
     }
     @Published var selectedTab = UUID()
@@ -876,6 +961,7 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
         self.volumeLoader = volumeLoader; self.volumeEjector = volumeEjector
         self.sessionDefaults = sessionDefaults
         self.favoritesDefaults = favoritesDefaults
+        self.tabs = [SearchModel(preferences: sessionDefaults)]
         favorites = FavoriteFolders.load(from: favoritesDefaults)
         favoritesObserver = NotificationCenter.default.publisher(for: FavoriteFolders.changed)
             .sink { [weak self] _ in
@@ -890,7 +976,7 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
             let state = try? JSONDecoder().decode(WorkspaceSession.self, from: data),
             !state.tabs.isEmpty, state.tabs.count <= 50
         {
-            tabs = state.tabs.map { $0.restore() }
+            tabs = state.tabs.map { $0.restore(preferences: sessionDefaults) }
             selectedTab = tabs[min(max(0, state.selectedIndex), tabs.count - 1)].id
         } else {
             selectedTab = tabs[0].id
@@ -904,7 +990,8 @@ struct FileJournal { let name: String; let operations: [FileMutation] }
     }
     var current: SearchModel { tabs.first { $0.id == selectedTab } ?? tabs[0] }
     func newTab(_ location: URL? = nil) {
-        let tab = SearchModel(); tab.navigate(location ?? current.location); tabs.append(tab);
+        let tab = SearchModel(preferences: sessionDefaults)
+        tab.navigate(location ?? current.location); tabs.append(tab);
         selectedTab = tab.id
     }
     func closeTab(_ id: UUID) {

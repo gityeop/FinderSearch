@@ -86,6 +86,11 @@ import UniformTypeIdentifiers
                 Button("Enclosing Folder") {
                     if let model { model.navigate(model.location.deletingLastPathComponent()) }
                 }.keyboardShortcut(.upArrow)
+                Button("Edit Location") {
+                    if let model {
+                        NotificationCenter.default.post(name: .editBrowserLocation, object: model.id)
+                    }
+                }.keyboardShortcut("l").disabled(model?.busy != false)
                 Button("Go to Folder…") { model?.goToFolder() }.keyboardShortcut(
                     "g", modifiers: [.command, .shift])
                 Divider()
@@ -313,9 +318,6 @@ struct BrowserView: View {
         .onChange(of: keyboardFocus) { _, focus in
             if focus == .search { fileNavigationActive = false }
         }
-        .onChange(of: model.query) { _, text in
-            if model.isSearch && model.sort != .relevance { model.sort = .relevance }
-        }
         .task(id: model.id) { await model.monitor() }
         .sheet(item: $model.conflict) { conflict in
             ConflictSheet(conflict: conflict) { choice, all in
@@ -379,9 +381,9 @@ struct BrowserView: View {
     private var searchScopeBar: some View {
         HStack(spacing: 10) {
             Text("Search:").foregroundStyle(.secondary)
-            Button("This Mac") { model.scope = "" }.buttonStyle(.bordered).tint(
+            Button("This Mac") { model.setSearchScope("") }.buttonStyle(.bordered).tint(
                 model.scope.isEmpty ? .accentColor : .secondary)
-            Button(model.location.lastPathComponent) { model.scope = model.location.path }
+            Button(model.location.lastPathComponent) { model.setSearchScope(model.location.path) }
                 .buttonStyle(.bordered).tint(model.scope.isEmpty ? .secondary : .accentColor)
             Spacer()
             Picker("Kind", selection: $model.fileType) {
@@ -476,36 +478,7 @@ struct BrowserView: View {
             addFavorite: { workspace.addFavorite($0) })
     }
     private var pathBar: some View {
-        VStack(spacing: 0) {
-            Divider();
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 5) {
-                    if !model.isSearch
-                        && (model.route == "recents" || model.route.hasPrefix("tag:"))
-                    {
-                        Label(model.title, systemImage: model.route == "recents" ? "clock" : "tag")
-                    } else {
-                        ForEach(model.ancestors, id: \.path) { url in
-                            Button {
-                                model.navigate(url)
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(
-                                        systemName: url.path == "/"
-                                            ? "internaldrive" : "folder.fill"
-                                    ).font(.system(size: 11));
-                                    Text(url.path == "/" ? "Macintosh HD" : url.lastPathComponent)
-                                }
-                            }.buttonStyle(.plain)
-                            if url != model.ancestors.last {
-                                Image(systemName: "chevron.right").font(.system(size: 8))
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-                }.font(.system(size: 11)).padding(.horizontal, 12).padding(.vertical, 6)
-            }
-        }.background(Color(nsColor: .windowBackgroundColor))
+        BrowserAddressBar(model: model).id(model.id)
     }
     private var statusBar: some View {
         HStack {

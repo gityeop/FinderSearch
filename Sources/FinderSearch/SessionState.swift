@@ -22,14 +22,17 @@ struct TabSession: Codable, Equatable {
         scrollOffset = model.scrollOffset
     }
 
-    @MainActor func restore() -> SearchModel {
-        let model = SearchModel()
+    @MainActor func restore(preferences: UserDefaults? = nil) -> SearchModel {
+        let model = SearchModel(preferences: preferences)
         model.navigate(URL(fileURLWithPath: path, isDirectory: true))
         if route == "recents" || route.hasPrefix("tag:") { model.sidebar(route) }
-        model.scope = scope; model.query = query
-        model.viewMode = FileViewMode(rawValue: view) ?? .icons
-        model.sort = FileSort(rawValue: sort) ?? .name
-        model.ascending = ascending; model.showHidden = hidden
+        model.query = query; model.scope = scope
+        if preferences.map({ BrowserPreferences(in: $0).rememberFolders }) ?? true {
+            model.viewMode = FileViewMode(rawValue: view) ?? .icons
+            model.sort = FileSort(rawValue: sort) ?? .name
+            model.ascending = ascending
+        }
+        model.showHidden = hidden
         model.selection = selection; model.scrollAnchor = scrollAnchor
         model.scrollOffset = scrollOffset
         return model
@@ -76,6 +79,6 @@ extension BrowserWorkspace {
 
     func reopenClosedTab() {
         guard let state = closedTabs.popLast() else { return }
-        let tab = state.restore(); tabs.append(tab); selectedTab = tab.id
+        let tab = state.restore(preferences: sessionDefaults); tabs.append(tab); selectedTab = tab.id
     }
 }

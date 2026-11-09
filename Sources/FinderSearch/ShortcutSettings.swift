@@ -86,15 +86,12 @@ struct ShortcutSettingsView: View {
                 ShortcutSettingRow(action: action).padding(.vertical, 14)
                 Divider()
             }
-            Text("Click a shortcut, then press a new combination. Enter and function keys can be used on their own. Escape cancels.")
-                .font(.system(size: 12)).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true).padding(.vertical, 20)
             Button("Restore Defaults") {
                 for action in BrowserShortcutAction.allCases {
                     UserDefaults.standard.removeObject(forKey: action.keyPreference)
                     UserDefaults.standard.removeObject(forKey: action.modifiersPreference)
                 }
-            }
+            }.padding(.top, 24)
         }
     }
 }

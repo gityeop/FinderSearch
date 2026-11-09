@@ -9,7 +9,9 @@ opens application bundles instead of browsing their contents. It is based on
 [zeusinsight/FinderSearch](https://github.com/zeusinsight/FinderSearch).
 Build and launch this fork with `./script/build_and_run.sh`.
 Choose a startup folder or restore your last session in **Settings → General**.
-Settings uses a sidebar with separate General and Keyboard shortcuts pages.
+Settings uses a sidebar with General, Appearance, Search, and Keyboard shortcuts pages.
+Set default views and sorting, remember per-folder choices, and configure search scope
+and exclusion patterns. Press **Command-L** to edit the folder address.
 
 A native Mac file browser with fast, fuzzy filename search. Browse folders,
 preview files, and manage your files in a familiar macOS interface.
